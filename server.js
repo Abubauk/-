@@ -6,7 +6,6 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Включаем поддержку JSON-запросов от фронтенда
 app.use(express.json());
 
 const DATA_FILE = path.join(__dirname, 'data', 'results.json');
@@ -21,16 +20,14 @@ function saveAll(list) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(list, null, 1));
 }
 
-// 1. АВТОМАТИЧЕСКАЯ РАЗДАЧА ВСЕХ ФАЙЛОВ ИНТЕРФЕЙСА (HTML, CSS, JS)
-app.use(express.static(__dirname));
-
-// 2. Маршрут для получения данных деталей через API
+// 1. Возвращаем базу данных деталей по запросу фронтенда
 app.get('/parts', (req, res) => {
     res.json({ parts: PARTS });
 });
 
-// 3. Маршрут для сохранения истории или отправки расчетов (если фронтенд делает POST-запрос)
-app.post('/calculate', (req, res) => {
+// 2. УНИВЕРСАЛЬНЫЙ ОБРАБОТЧИК ДЛЯ КНОПКИ «РАССЧИТАТЬ»
+// Будет принимать POST-запрос на ЛЮБОЙ адрес (и на /, и на /calculate, и на /api)
+app.post('*', (req, res) => {
     try {
         const data = req.body;
         const list = loadAll();
@@ -41,6 +38,9 @@ app.post('/calculate', (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 });
+
+// 3. АВТОМАТИЧЕСКАЯ РАЗДАЧА ВСЕХ ФАЙЛОВ ИНТЕРФЕЙСА
+app.use(express.static(__dirname));
 
 app.listen(PORT, () => {
     console.log(`Сервер успешно работает на порту ${PORT}`);
