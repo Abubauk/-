@@ -21,11 +21,12 @@ function saveAll(list) {
 
 // СОЗДАНИЕ СЕРВЕРА С РАЗДАЧЕЙ ФАЙЛОВ ИЗ ПАПКИ PUBLIC
 const server = http.createServer((req, res) => {
-  // Убираем параметры запроса из URL (например, ?query=...)
-  const parsedUrl = req.url.split('?')[0];
+  // ИСПРАВЛЕНО: Правильно отсекаем параметры Telegram (?, #) из URL
+  const cleanUrl = req.url.split('?')[0].split('#')[0];
 
-  // 1. ПУТЬ ПО УМОЛЧАНИЮ (ГЛАВНАЯ СТРАНИЦА)
-  let filePath = path.join(__dirname, 'public', parsedUrl === '/' ? 'index.html' : parsedUrl);
+  // Определяем, какой файл искать в папке public
+  let targetFile = cleanUrl === '/' ? 'index.html' : cleanUrl;
+  let filePath = path.join(__dirname, 'public', targetFile);
 
   // Определение расширения файла для правильного заголовка
   const extname = String(path.extname(filePath)).toLowerCase();
@@ -42,22 +43,23 @@ const server = http.createServer((req, res) => {
 
   const contentType = mimeTypes[extname] || 'application/octet-stream';
 
-  // 2. ОБРАБОТКА API ДЛЯ ЧТЕНИЯ PARTS
-  if (parsedUrl === '/parts') {
+  // ОБРАБОТКА API ДЛЯ ЧТЕНИЯ PARTS
+  if (cleanUrl === '/parts') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ parts: PARTS }));
     return;
   }
 
-  // 3. ЧТЕНИЕ И ОТДАЧА СТАТИЧЕСКИХ ФАЙЛОВ ИЗ ПАПКИ PUBLIC
+  // ЧТЕНИЕ И ОТДАЧА СТАТИЧЕСКИХ ФАЙЛОВ ИЗ ПАПКИ PUBLIC
   fs.readFile(filePath, (error, content) => {
     if (error) {
       if (error.code === 'ENOENT') {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('Not Found');
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        // Теперь сервер честно скажет, какой именно файл он ищет и не находит
+        res.end(`Not Found: сервер не нашёл файл по пути: ${targetFile}`);
       } else {
         res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end(`Sorry, check with the site admin for error: ${error.code} ..\n`);
+        res.end(`Server Error: ${error.code}\n`);
       }
     } else {
       res.writeHead(200, { 'Content-Type': contentType });
