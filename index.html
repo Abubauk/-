@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Расчёт окон</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #ffffff);
+    --text: var(--tg-theme-text-color, #1c1c1e);
+    --hint: var(--tg-theme-hint-color, #8e8e93);
+    --link: var(--tg-theme-link-color, #2481cc);
+    --btn: var(--tg-theme-button-color, #2481cc);
+    --btn-text: var(--tg-theme-button-text-color, #ffffff);
+    --card: var(--tg-theme-secondary-bg-color, #f2f2f7);
+    --danger: #e5484d;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; padding: 16px 16px 40px; background: var(--bg); color: var(--text);
+         font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 12px; }
+  h2 { font-size: 17px; margin: 24px 0 8px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab { flex: 1; padding: 10px; border: 0; border-radius: 10px; background: var(--card); color: var(--text); font-size: 15px; }
+  .tab.active { background: var(--btn); color: var(--btn-text); }
+  .card { background: var(--card); border-radius: 14px; padding: 14px; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; min-width: 0; }
+  label { display: block; font-size: 13px; color: var(--hint); margin: 10px 0 4px; }
+  label:first-child { margin-top: 0; }
+  input, select { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid transparent;
+                  background: var(--bg); color: var(--text); font-size: 16px; }
+  input:focus, select:focus { outline: 2px solid var(--btn); }
+  button.main { width: 100%; margin-top: 14px; padding: 13px; border: 0; border-radius: 12px;
+                background: var(--btn); color: var(--btn-text); font-size: 16px; font-weight: 600; }
+  button.sec { background: transparent; color: var(--link); border: 1px solid var(--link); }
+  button:disabled { opacity: .5; }
+  .err { color: var(--danger); font-size: 14px; margin-top: 10px; min-height: 18px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-weight: 500; color: var(--hint); font-size: 12px; padding: 0 4px 6px; }
+  td { padding: 8px 4px; border-top: 1px solid rgba(128,128,128,.2); vertical-align: top; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  .actions { display: flex; gap: 10px; }
+  .actions button { flex: 1; }
+  .hist-item { background: var(--card); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+  .hist-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .hist-title { font-weight: 600; }
+  .hist-meta { color: var(--hint); font-size: 13px; }
+  .hist-btns { display: flex; gap: 14px; margin-top: 8px; font-size: 14px; }
+  .hist-btns a { color: var(--link); text-decoration: none; }
+  .hist-btns a.del { color: var(--danger); }
+  .hidden { display: none; }
+  .empty { color: var(--hint); text-align: center; padding: 30px 0; }
+  .hint { color: var(--hint); font-size: 13px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<h1>🪟 Расчёт окон</h1>
+
+<div class="tabs">
+  <button class="tab active" data-tab="calc">Расчёт</button>
+  <button class="tab" data-tab="hist">История</button>
+</div>
+
+<section id="calc">
+  <div class="card">
+    <div class="row">
+      <div><label for="w">Ширина, мм</label><input id="w" type="number" inputmode="numeric" placeholder="1400"></div>
+      <div><label for="h">Высота, мм</label><input id="h" type="number" inputmode="numeric" placeholder="1300"></div>
+    </div>
+    <div class="row">
+      <div><label for="n">Секций</label>
+        <select id="n"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></div>
+      <div><label for="s">Открывающихся створок</label>
+        <select id="s"></select></div>
+    </div>
+    <label for="r">Запас на отходы, %</label>
+    <input id="r" type="number" inputmode="decimal" value="5">
+    <div class="err" id="err"></div>
+    <button class="main" id="go">Рассчитать</button>
+  </div>
+
+  <div id="result" class="hidden">
+    <h2>Нужно деталей</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>Деталь</th><th class="num">Шт.</th><th class="num">Метры / м²</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="hint" id="note"></div>
+    </div>
+    <label for="title" style="margin-top:14px">Название (заказчик, объект)</label>
+    <input id="title" type="text" maxlength="100" placeholder="Например: Иванов, кухня">
+    <div class="actions" style="margin-top:12px">
+      <button class="main" id="save" style="margin-top:0">Сохранить</button>
+      <button class="main sec" id="copy" style="margin-top:0">Скопировать</button>
+    </div>
+  </div>
+</section>
+
+<section id="hist" class="hidden">
+  <div id="histList"></div>
+</section>
+
+<script>
+const tg = window.Telegram && Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const $ = (id) => document.getElementById(id);
+const fmt = (x) => String(x).replace('.', ',');
+
+async function api(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-Init-Data': (tg && tg.initData) || '' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Ошибка сервера');
+  return data;
+}
+
+function fillOpening() {
+  const n = +$('n').value, cur = +$('s').value || 1;
+  $('s').innerHTML = '';
+  for (let i = 0; i <= n; i++) $('s').add(new Option(i, i));
+  $('s').value = Math.min(cur, n);
+}
+$('n').addEventListener('change', fillOpening);
+fillOpening();
+
+let last = null;
+
+function renderRows(rows, target) {
+  target.innerHTML = rows.map((r) => `
+    <tr><td>${r.name}</td><td class="num">${r.pcs}</td>
+    <td class="num">${r.total != null ? fmt(r.total) + ' ' + r.unit : '—'}</td></tr>`).join('');
+}
+
+function toText(item) {
+  const i = item.input;
+  const head = (item.title ? item.title + '\n' : '') +
+    `Окно ${i.widthMm}×${i.heightMm} мм, секций: ${i.sections}, открывающихся: ${i.opening}, запас ${i.reserve}%`;
+  const lines = item.rows.map((r) => `• ${r.name}: ${r.pcs} шт.` + (r.total != null ? `, ${fmt(r.total)} ${r.unit}` : ''));
+  return head + '\n' + lines.join('\n');
+}
+
+$('go').addEventListener('click', async () => {
+  $('err').textContent = '';
+  $('go').disabled = true;
+  try {
+    last = await api('POST', '/api/calc', {
+      widthMm: $('w').value, heightMm: $('h').value,
+      sections: $('n').value, opening: $('s').value, reserve: $('r').value || 0,
+    });
+    renderRows(last.rows, $('rows'));
+    $('note').textContent = 'Метры и м² указаны с учётом запаса ' + last.input.reserve + '%.';
+    $('result').classList.remove('hidden');
+    $('result').scrollIntoView({ behavior: 'smooth' });
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+  } catch (e) {
+    $('err').textContent = e.message;
+    $('result').classList.add('hidden');
+  } finally { $('go').disabled = false; }
+});
+
+$('save').addEventListener('click', async () => {
+  if (!last) return;
+  $('save').disabled = true;
+  try {
+    await api('POST', '/api/results', { ...last.input, widthMm: last.input.widthMm, title: $('title').value });
+    $('save').textContent = 'Сохранено ✓';
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+    setTimeout(() => { $('save').textContent = 'Сохранить'; $('save').disabled = false; }, 1500);
+  } catch (e) {
+    $('err').textContent = e.message;
+    $('save').disabled = false;
+  }
+});
+
+$('copy').addEventListener('click', async () => {
+  if (!last) return;
+  const text = toText({ ...last, title: $('title').value });
+  try { await navigator.clipboard.writeText(text); $('copy').textContent = 'Скопировано ✓'; }
+  catch { prompt('Скопируйте текст:', text); }
+  setTimeout(() => { $('copy').textContent = 'Скопировать'; }, 1500);
+});
+
+// История
+async function loadHistory() {
+  const box = $('histList');
+  box.innerHTML = '<div class="empty">Загрузка…</div>';
+  try {
+    const list = await api('GET', '/api/results');
+    if (!list.length) { box.innerHTML = '<div class="empty">Пока ничего не сохранено</div>'; return; }
+    box.innerHTML = '';
+    list.forEach((item) => {
+      const d = new Date(item.createdAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const i = item.input;
+      const el = document.createElement('div');
+      el.className = 'hist-item';
+      el.innerHTML = `
+        <div class="hist-head"><span class="hist-title">${esc(item.title) || 'Без названия'}</span><span class="hist-meta">${d}</span></div>
+        <div class="hist-meta">${i.widthMm}×${i.heightMm} мм · секций ${i.sections} · створок ${i.opening}</div>
+        <div class="hist-btns"><a href="#" data-a="open">Открыть</a><a href="#" data-a="copy">Копировать</a><a href="#" class="del" data-a="del">Удалить</a></div>`;
+      el.querySelector('[data-a=open]').onclick = (e) => { e.preventDefault(); openItem(item); };
+      el.querySelector('[data-a=copy]').onclick = async (e) => {
+        e.preventDefault();
+        try { await navigator.clipboard.writeText(toText(item)); e.target.textContent = 'Скопировано ✓'; } catch { prompt('Скопируйте текст:', toText(item)); }
+      };
+      el.querySelector('[data-a=del]').onclick = async (e) => {
+        e.preventDefault();
+        if (!confirm('Удалить этот расчёт?')) return;
+        await api('DELETE', '/api/results/' + item.id);
+        loadHistory();
+      };
+      box.appendChild(el);
+    });
+  } catch (e) { box.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+}
+function esc(s) { return String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function openItem(item) {
+  const i = item.input;
+  $('w').value = i.widthMm; $('h').value = i.heightMm; $('n').value = i.sections;
+  fillOpening(); $('s').value = i.opening; $('r').value = i.reserve; $('title').value = item.title || '';
+  last = item;
+  renderRows(item.rows, $('rows'));
+  $('note').textContent = 'Метры и м² указаны с учётом запаса ' + i.reserve + '%.';
+  $('result').classList.remove('hidden');
+  showTab('calc');
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+  $('calc').classList.toggle('hidden', name !== 'calc');
+  $('hist').classList.toggle('hidden', name !== 'hist');
+  if (name === 'hist') loadHistory();
+}
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
+</script>
+</body>
+</html>
