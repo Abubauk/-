@@ -26,24 +26,46 @@ app.get('/parts', (req, res) => {
 });
 
 // 2. УНИВЕРСАЛЬНЫЙ ОБРАБОТЧИК ДЛЯ КНОПКИ «РАССЧИТАТЬ»
-// Возвращает объект с массивом rows, чтобы фронтенд мог выполнить rows.map()
 app.post('*', (req, res) => {
     try {
-        const data = req.body;
+        const inputData = req.body;
         const list = loadAll();
         
-        const newCalculation = { id: Date.now().toString(), ...data };
+        // Создаем правильную структуру объекта расчета, которую ждет фронтенд (с полем input)
+        const newCalculation = { 
+            id: Date.now().toString(), 
+            input: {
+                width: Number(inputData.width || inputData.w || 0),
+                height: Number(inputData.height || inputData.h || 0),
+                sections: Number(inputData.sections || 0),
+                openers: Number(inputData.openers || 0),
+                reserve: Number(inputData.reserve || inputData.percent || 5)
+            },
+            rows: [] // Если ваш фронтенд сам рассчитывает строки деталей, оставляем пустым, либо он заполнится из inputData.rows
+        };
+
+        // Если фронтенд прислал уже готовые посчитанные строки деталей, сохраняем их
+        if (inputData.rows) {
+            newCalculation.rows = inputData.rows;
+        }
+
         list.push(newCalculation);
         saveAll(list);
         
-        // Передаем success и массив rows (даже если он пока пустой или содержит одну запись)
+        // Отправляем ответ, где есть и список 'rows', и объект последнего расчета 'last' с 'input.reserve'
         res.json({ 
             success: true, 
             message: 'Расчет успешно сохранен',
-            rows: list // Отдаем список расчетов, чтобы фронтенд не ломался на rows.map
+            rows: newCalculation.rows || [],
+            last: newCalculation
         });
     } catch (err) {
-        res.status(500).json({ success: false, error: err.message, rows: [] });
+        res.status(500).json({ 
+            success: false, 
+            error: err.message, 
+            rows: [], 
+            last: { input: { reserve: 5 }, rows: [] } 
+        });
     }
 });
 
