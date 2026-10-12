@@ -26,16 +26,24 @@ app.get('/parts', (req, res) => {
 });
 
 // 2. УНИВЕРСАЛЬНЫЙ ОБРАБОТЧИК ДЛЯ КНОПКИ «РАССЧИТАТЬ»
-// Будет принимать POST-запрос на ЛЮБОЙ адрес (и на /, и на /calculate, и на /api)
+// Возвращает объект с массивом rows, чтобы фронтенд мог выполнить rows.map()
 app.post('*', (req, res) => {
     try {
         const data = req.body;
         const list = loadAll();
-        list.push({ id: Date.now().toString(), ...data });
+        
+        const newCalculation = { id: Date.now().toString(), ...data };
+        list.push(newCalculation);
         saveAll(list);
-        res.json({ success: true, message: 'Расчет успешно сохранен' });
+        
+        // Передаем success и массив rows (даже если он пока пустой или содержит одну запись)
+        res.json({ 
+            success: true, 
+            message: 'Расчет успешно сохранен',
+            rows: list // Отдаем список расчетов, чтобы фронтенд не ломался на rows.map
+        });
     } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
+        res.status(500).json({ success: false, error: err.message, rows: [] });
     }
 });
 
