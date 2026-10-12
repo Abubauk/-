@@ -1,0 +1,8 @@
+{
+  "name": "window-calc-miniapp",
+  "version": "1.0.0",
+  "description": "Telegram Mini App: расчёт деталей для окон",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}
