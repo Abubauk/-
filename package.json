@@ -1,8 +1,11 @@
 {
-  "name": "window-calc-miniapp",
+  "name": "raschet-server",
   "version": "1.0.0",
-  "description": "Telegram Mini App: расчёт деталей для окон",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "engines": { "node": ">=18" }
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
 }
