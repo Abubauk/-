@@ -26,7 +26,7 @@ const server = http.createServer((req, res) => {
 
   // Определяем, какой файл искать в папке public
   let targetFile = cleanUrl === '/' ? 'index.html' : cleanUrl;
-  let filePath = path.join(__dirname, 'public', targetFile);
+  let filePath = path.join(__dirname,  targetFile);
 
   // Определение расширения файла для правильного заголовка
   const extname = String(path.extname(filePath)).toLowerCase();
